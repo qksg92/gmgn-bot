@@ -150,7 +150,7 @@ def monitor():
             volume = get_1m_volume(ca)
             print(f"[Check] {ca} volume: {volume}")
 
-            if volume >= 5000:
+            if volume >= 8000:
                 last_alert = already_alerted.get(ca, 0)
                 if now - last_alert >= NO_ALERT_SECONDS:
                     send_telegram_alert(ca)
@@ -167,7 +167,7 @@ def monitor():
                     # 1분 기다렸다가 다시 체크
                     volume_after = get_1m_volume(ca)
                     print(f"[Recheck] {ca} volume after 1m: {volume_after}")
-                    if volume_after >= 5000:
+                    if volume_after >= 8000:
                         last_alert = already_alerted.get(ca, 0)
                         if now - last_alert >= NO_ALERT_SECONDS:
                             send_telegram_alert(ca)
