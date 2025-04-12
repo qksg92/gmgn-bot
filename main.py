@@ -12,6 +12,7 @@ watchlist = {}  # {ca: {'start_time': 시작시간, 'waiting': 대기중 여부}
 
 # === 기본 설정 ===
 GMGN_POPULAR_5M_URL = 'https://gmgn.ai/?chain=sol'
+GMGN_COMPLETED_URL = 'https://gmgn.ai/meme?chain=sol'  # 컴플리티드 탭 URL
 CHECK_INTERVAL = 10  # 인기탭 10초마다 검사
 NO_ALERT_SECONDS = 600  # 같은 코인 다시 알림 금지 시간 (10분)
 KEEP_WATCH_SECONDS = 432000  # 감시 유지 시간 (5일)
@@ -94,13 +95,40 @@ def fetch_popular_cas():
             f.write(f"GMGN error: {e}\n")
     return list(set(cas))  # 중복 제거
 
+# === GMGN 완료탭 긁기 ===
+def fetch_completed_cas():
+    cas = []
+    try:
+        response = session.get(GMGN_COMPLETED_URL, timeout=10)
+        if response.status_code != 200:
+            print("[Error] GMGN 완료탭 가져오기 실패 (status {})".format(response.status_code))
+            return []
+        soup = BeautifulSoup(response.text, 'html.parser')
+        links = soup.find_all('a', href=True)
+        for link in links:
+            href = link['href']
+            if href.startswith('/sol/token/'):
+                ca = href.split('/')[-1]
+                cas.append(ca)
+    except Exception as e:
+        print(f"[GMGN Error] {e}")
+        with open('errors.log', 'a') as f:
+            f.write(f"GMGN error: {e}\n")
+    return list(set(cas))  # 중복 제거
+
+# === 두 개의 탭에서 코인들을 모두 가져오기 ===
+def fetch_all_cas():
+    popular_cas = fetch_popular_cas()
+    completed_cas = fetch_completed_cas()
+    return list(set(popular_cas + completed_cas))  # 두 리스트를 합쳐서 중복 제거
+
 # === 메인 루프 ===
 def monitor():
     while True:
         now = time.time()
 
-        # 1. GMGN 인기탭 긁어서 새 코인 추가
-        cas = fetch_popular_cas()
+        # 1. GMGN 인기탭 + 완료탭 긁어서 새 코인 추가
+        cas = fetch_all_cas()
         for ca in cas:
             if ca not in watchlist:
                 watchlist[ca] = {'start_time': now, 'waiting': False}
